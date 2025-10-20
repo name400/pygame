@@ -10,7 +10,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("⚔️ PyRPG")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("malgungothic", 24)
-count = 1
+count = 0
 
 # --- 객체 생성 ---
 player = Player(400, 300)

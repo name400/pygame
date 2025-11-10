@@ -7,8 +7,13 @@ BASE_SHOP_ITEMS = [
     {"name":"브론즈 소드",     "type":"weapon", "slot":"weapon","atk":5, "cost":30, "desc":"+5 ATK"},
     {"name":"가죽 갑옷",       "type":"armor",  "slot":"armor", "def":3, "cost":30, "desc":"+3 DEF"},
     {"name":"루비 반지",       "type":"accessory","slot":"accessory","hp":20,"cost":35,"desc":"+20 MaxHP"},
-    {"name":"불의 룬",         "type":"weapon", "slot":"weapon","atk":0,"element":"fire","cost":40,"desc":"무기 속성: 불"},
-    {"name":"얼음의 룬",       "type":"weapon", "slot":"weapon","atk":0,"element":"ice","cost":40,"desc":"무기 속성: 얼음"},
+
+    # ---- 룬: 무기와 분리 (별도 슬롯 "rune") ----
+    {"name":"불의 룬",    "type":"rune", "slot":"rune", "element":"fire",      "cost":40, "desc":"무기 속성: 불"},
+    {"name":"얼음의 룬",  "type":"rune", "slot":"rune", "element":"ice",       "cost":40, "desc":"무기 속성: 얼음"},
+    {"name":"번개의 룬",  "type":"rune", "slot":"rune", "element":"lightning", "cost":40, "desc":"무기 속성: 번개"},
+    {"name":"대지의 룬",  "type":"rune", "slot":"rune", "element":"earth",     "cost":40, "desc":"무기 속성: 대지"},
+    {"name":"독의 룬",    "type":"rune", "slot":"rune", "element":"poison",    "cost":40, "desc":"무기 속성: 독"},
 ]
 
 EXIT_ITEM = {"name":"그만두기", "type":"exit", "cost":0}
@@ -51,8 +56,7 @@ def scaled_item(item: dict, tier_name: str, mult: float, tier_idx: int) -> dict:
 
     # 이름 처리
     base = strip_tier_words(it["name"])
-    # 룬류는 원래 이름 앞에 티어만 접두사로 붙인다 (예: 실버 불의 룬)
-    if "룬" in it["name"]:
+    if it.get("type") == "rune" or "룬" in it["name"]:
         it["name"] = f"{tier_name} {it['name']}"
     else:
         it["name"] = f"{tier_name} {base}"
@@ -67,12 +71,6 @@ def scaled_item(item: dict, tier_name: str, mult: float, tier_idx: int) -> dict:
         if it.get("atk", 0) > 0:
             it["atk"] = max(1, int(round(it["atk"] * mult)))
             it["desc"] = f"+{it['atk']} ATK"
-        else:
-            # 룬: 속성 부여 + 추가 피해 %
-            bonus = 10 + 5 * tier_idx  # 10%, 15%, 20% ...
-            it["element_bonus"] = bonus
-            elem_kor = "불" if it.get("element") == "fire" else ("얼음" if it.get("element")=="ice" else "속성")
-            it["desc"] = f"무기 속성: {elem_kor}, 추가 피해 +{bonus}%"
 
     elif t == "armor" and it.get("slot") == "armor":
         if "def" in it:
@@ -88,6 +86,17 @@ def scaled_item(item: dict, tier_name: str, mult: float, tier_idx: int) -> dict:
         if "heal" in it:
             it["heal"] = max(1, int(round(it["heal"] * mult)))
             it["desc"] = f"HP {it['heal']} 회복"
+
+    elif t == "rune" and it.get("slot") == "rune":
+        # 룬: 속성 부여 + 추가 피해 % (티어에 따라 증가)
+        bonus = 10 + 5 * tier_idx  # 10%, 15%, 20%, ...
+        it["element_bonus"] = bonus
+        elem_map = {
+            "fire":"불", "ice":"얼음", "lightning":"번개",
+            "earth":"대지", "poison":"독"
+        }
+        elem_kor = elem_map.get(it.get("element"), "속성")
+        it["desc"] = f"무기 속성: {elem_kor}, 추가 피해 +{bonus}%"
 
     return it
 
@@ -140,5 +149,4 @@ def open_shop(screen, font, player):
                         item_copy = {k:v for k,v in chosen.items() if k not in ("cost",)}
                         player.add_item(item_copy)
                     else:
-                        # 잔액 부족 알림을 넣고 싶으면 여기 처리
                         pass

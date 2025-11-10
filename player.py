@@ -13,11 +13,12 @@ class Player:
         # --- 상태/속성 ---
         self.debuffs = {}             # {"poison":3,"weaken":2}
         self.buffs = {}               # {"atk_up":(turns, value), "guard":(turns, value), "evasion":(turns, chance)}
-        self.element = "physical"     # 무기/룬 속성
+        self.element = "physical"     # 기본: 물리(룬 미장착 시)
 
         # --- 인벤토리/장비 ---
         self.inventory = []
-        self.equipment = {"weapon":None,"armor":None,"accessory":None}
+        # ✅ 룬 슬롯 분리
+        self.equipment = {"weapon":None,"armor":None,"accessory":None,"rune":None}
 
         # --- 전직/스킬 ---
         self.job = None               # 'Warrior'/'Rogue'/'Mage'/'Tanker'
@@ -109,7 +110,7 @@ class Player:
     def level_up(self):
         self.level += 1
         self.atk += 3; self.defence += 1
-        self.max_hp += 20; self.hp = self.max_hp
+        self.max_hp += 7; self.hp = self.max_hp
         print(f"🎉 레벨업! Lv.{self.level}")
 
         # 전직 트리거
@@ -205,7 +206,6 @@ class Player:
         self.skill_cooldowns[sid] = self.skill_cd_map.get(sid, 1)
 
     # ------------ 스킬 효과 ------------
-    # 반환값: (damage_dealt, monster_stunned, extra_log_list)
     def cast_skill(self, sid, monster):
         logs = []
         dmg = 0
@@ -286,7 +286,7 @@ class Player:
             logs.append("…(알 수 없는 스킬)")
         return max(0, dmg), stun, logs
 
-    # -------- 인벤토리/장비 (기존 호환) --------
+    # -------- 인벤토리/장비 --------
     def add_item(self, item: dict):
         self.inventory.append(item)
 
@@ -302,15 +302,32 @@ class Player:
     def equip_item(self, idx, log_append=None):
         if idx < 0 or idx >= len(self.inventory): return
         item = self.inventory[idx]
-        if item.get("type") not in ("weapon","armor","accessory"): return
+        t = item.get("type")
         slot = item.get("slot")
+        if t not in ("weapon","armor","accessory","rune"): return
+        if slot not in self.equipment: return
+
+        # 이미 장착된 동일 슬롯이 있으면 해제
         if self.equipment.get(slot):
             self.unequip(slot, log_append)
-        if "atk" in item: self.atk += item["atk"]
-        if "def" in item: self.defence += item["def"]
-        if "hp"  in item:
-            self.max_hp += item["hp"]; self.hp = min(self.max_hp, self.hp)
-        if item.get("element"): self.element = item["element"]
+
+        # 스탯 적용
+        if slot != "rune":  # 룬은 스탯 변동 없음, 속성만 변경
+            if "atk" in item: self.atk += item["atk"]
+            if "def" in item: self.defence += item["def"]
+            if "hp"  in item:
+                self.max_hp += item["hp"]; self.hp = min(self.max_hp, self.hp)
+
+        # 속성 처리
+        if slot == "rune":
+            # 룬을 장착하면 무기 속성은 룬으로 덮어쓴다
+            if item.get("element"):
+                self.element = item["element"]
+        else:
+            # 무기에 자체 element가 있다면 반영(기본 무기는 없음)
+            if item.get("element"):
+                self.element = item["element"]
+
         self.equipment[slot] = item
         if log_append: log_append(f"🔧 장착: {item['name']}")
         self.inventory.pop(idx)
@@ -318,9 +335,26 @@ class Player:
     def unequip(self, slot, log_append=None):
         eq = self.equipment.get(slot)
         if not eq: return
-        if "atk" in eq: self.atk -= eq["atk"]
-        if "def" in eq: self.defence -= eq["def"]
-        if "hp"  in eq:
-            self.max_hp -= eq["hp"]; self.hp = min(self.hp, self.max_hp)
+
+        # 해제 전 참조(룬 해제 후 무기 속성 복원 용도)
+        weapon_ref = self.equipment.get("weapon")
+
+        # 스탯 회수
+        if slot != "rune":
+            if "atk" in eq: self.atk -= eq["atk"]
+            if "def" in eq: self.defence -= eq["def"]
+            if "hp"  in eq:
+                self.max_hp -= eq["hp"]; self.hp = min(self.hp, self.max_hp)
+
+        # 장비 분리
         self.add_item(eq); self.equipment[slot] = None
+
+        # 속성 복원 로직
+        if slot == "rune":
+            # 룬을 빼면 무기에 element가 있으면 그걸로, 없으면 물리로
+            if weapon_ref and weapon_ref.get("element"):
+                self.element = weapon_ref["element"]
+            else:
+                self.element = "physical"
+
         if log_append: log_append(f"🔧 해제: {eq['name']}")

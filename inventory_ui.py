@@ -1,7 +1,7 @@
 import pygame
 
 HELP1 = "인벤토리: ↑/↓ 선택, ENTER=사용/장착, U=해제, DEL=버리기, ESC=닫기"
-HELP2 = "장비 슬롯: [W]무기 [A]방어구 [S]장신구 → U로 해제"
+HELP2 = "장비 슬롯: [W]무기 [A]방어구 [S]장신구 [R]룬 → U로 해제"
 
 def open_inventory(screen, font, player):
     idx = 0
@@ -13,14 +13,14 @@ def open_inventory(screen, font, player):
 
         # 장비 상태
         y_equ = 110
-        for slot in ("weapon","armor","accessory"):
+        for slot in ("weapon","armor","accessory","rune"):
             eq = player.equipment.get(slot)
             line = f"{slot.upper():9}: {eq['name'] if eq else '-'}"
             screen.blit(font.render(line, True, (255,220,120)), (40, y_equ))
             y_equ += 30
 
-        # 아이템 리스트
-        start_y = 200
+        # 아이템 리스트 시작 위치를 '장비 블럭 아래'로 이동(겹침 방지)
+        start_y = y_equ + 10
         if not player.inventory:
             screen.blit(font.render("(인벤토리 비어 있음)", True, (180,180,180)), (40, start_y))
         else:
@@ -49,19 +49,16 @@ def open_inventory(screen, font, player):
                         if it.get("type") == "consumable":
                             player.use_consumable(idx)
                             idx = min(idx, len(player.inventory)-1)
-                        elif it.get("type") in ("weapon","armor","accessory"):
+                        elif it.get("type") in ("weapon","armor","accessory","rune"):
                             player.equip_item(idx)
                             idx = min(idx, len(player.inventory)-1)
                 elif event.key == pygame.K_u:
-                    # 선택 슬롯 기준이 아니라 직접 슬롯 키로 해제하는 버전도 고려 가능
-                    # 여기서는 간단히: 현재 선택 아이템의 슬롯이 장착중이면 해제
                     if player.inventory:
                         it = player.inventory[idx]
                         slot = it.get("slot")
                         if slot and player.equipment.get(slot):
                             player.unequip(slot)
                 elif event.key == pygame.K_DELETE:
-                    # 버리기
                     if player.inventory:
                         player.inventory.pop(idx)
                         idx = min(idx, len(player.inventory)-1)

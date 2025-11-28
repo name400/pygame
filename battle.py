@@ -22,12 +22,12 @@ def _scale_stat(base, run_count, stage, boss=False, kind="other"):
     run_idx   = min(run_count, 10)
 
     if kind in ("hp", "atk", "other"):
-        stage_mult = 1.0 + 0.04 * stage_idx
+        stage_mult = 1.0 + 0.06 * stage_idx
         run_mult   = 1.0 + 0.02 * run_idx
     elif kind == "exp":
         early = min(stage_idx, 9)
         late  = max(stage_idx - 9, 0)
-        stage_mult = (1.0 + 0.02 * early) * (1.0 + 0.005 * late)
+        stage_mult = (1.1 + 0.02 * early) * (1.0 + 0.005 * late)
         run_mult   = 1.0 + 0.01 * run_idx
     elif kind == "gold":
         early = min(stage_idx, 9)
@@ -44,7 +44,7 @@ def _scale_stat(base, run_count, stage, boss=False, kind="other"):
 
     if boss:
         if kind in ("hp", "atk"):
-            val = int(val * 1.15)   # 보스 더 약하게
+            val = int(val * 0.78)   # 보스 더 약하게
         elif kind in ("exp", "gold"):
             val = int(val * 1.05)   # 보상 거의 안 올림
 

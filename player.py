@@ -109,7 +109,7 @@ class Player:
 
     def level_up(self):
         self.level += 1
-        self.atk += 3; self.defence += 1
+        self.atk += 3; self.defence += 0.5
         self.max_hp += 7; self.hp = self.max_hp
         print(f"🎉 레벨업! Lv.{self.level}")
 
